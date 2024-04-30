@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile</title>
+</head>
+<body>
+  <div class="container">
+    <h1>User Profile</h1>
+    <form id="profile-form" action="#">
+      <div class="profile-info">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+      </div>
+      <div class="profile-info">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+      </div>
+      <div class="profile-info">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <div class="profile-info">
+        <button type="submit">Update Profile</button>
+      </div>
+      <div class="profile-info">
+        <button type="button" id="signout-btn">Sign Out</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module">
+    // Import the necessary Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    // Initialize Firebase
+    const firebaseConfig = {
+        databaseURL: "https://capstone-db3cd-default-rtdb.firebaseio.com/", // Add the databaseURL
+        apiKey: "AIzaSyCZLwsOneYhNgqrV2FSSJldSt1ErYgyTb4",
+        authDomain: "capstone-db3cd.firebaseapp.com",
+      projectId: "capstone-db3cd",
+      storageBucket: "capstone-db3cd.appspot.com",
+      messagingSenderId: "capstone-db3cd.appspot.com",
+      appId:"1:895927224137:web:4769f8e442dffa0d923c98", 
+    };
+    const app = initializeApp(firebaseConfig);
+
+    // Get a reference to the Firebase authentication and database services
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+
+    // Get the current user
+    const user = auth.currentUser;
+
+    // Check if the user is logged in
+    if (user) {
+      // Get a reference to the user's profile data in the database
+      const userRef = ref(database, `users/${user.uid}`);
+
+      // Fetch the user's profile data from the database
+      onValue(userRef, (snapshot) => {
+        const userData = snapshot.val();
+        if (userData) {
+          // Populate the input fields with the user's profile data
+          document.getElementById("username").value = userData.username;
+          document.getElementById("email").value = userData.email;
+          document.getElementById("password").value = userData.password;
+        }
+      });
+    } else {
+      console.log("User is not logged in.");
+    }
+
+   // Add event listener for the sign-out button
+const signoutBtn = document.getElementById('signout-btn');
+signoutBtn.addEventListener('click', () => {
+  signOut(auth).then(() => {
+    console.log('User signed out successfully');
+    // Redirect to the sign-in page
+    window.location.href = "trysignin.html";
+  }).catch((error) => {
+    console.error('Sign out error:', error);
+  });
+});
+
+  </script>
+
+  <h2>
+    <a href="homepage.html">&lt; Back to Admin Desktop</a>
+  </h2>
+
+</body>
+</html><style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .profile-info {
+      margin-bottom: 20px;
+    }
+
+    .profile-info label {
+      font-weight: bold;
+    }
+
+    .profile-info input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .profile-info button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .profile-info button:hover {
+      background-color: #45a049;
+    }
+  </style>

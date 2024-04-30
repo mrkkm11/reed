@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Classes</title>
+</head>
+<body>
+    <header>
+        <h1>Classes</h1>
+    </header>
+
+    <div id="dialog-overlay"></div>
+    <div id="dialog-box">
+        <h3>Add a Class</h3>
+        <form id="add-class-form">
+            <label for="grade">Grade Level:</label>
+            <select id="grade" name="grade">
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+            </select>
+            <label for="section">Section:</label>
+            <select id="section" name="section">
+                <option value="A">A</option>
+                <option value="B">B</option>
+            </select>
+            <button type="submit" id="add-class-btn">Add Class</button>
+            <button type="button" id="cancel-btn">Cancel</button>
+        </form>
+    </div>
+
+    <main>
+    </main>
+
+    <nav>
+        <ul id="class-navigation">
+            <!-- Navigation links will be dynamically added here -->
+        </ul>
+    </nav>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            databaseURL: "https://capstone-db3cd-default-rtdb.firebaseio.com/",
+            apiKey: "AIzaSyCZLwsOneYhNgqrV2FSSJldSt1ErYgyTb4",
+            authDomain: "capstone-db3cd.firebaseapp.com",
+            projectId: "capstone-db3cd",
+            storageBucket: "capstone-db3cd.appspot.com",
+            messagingSenderId: "capstone-db3cd.appspot.com",
+            appId: "1:895927224137:web:4769f8e442dffa0d923c98",
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        const dialogOverlay = document.getElementById('dialog-overlay');
+        const dialogBox = document.getElementById('dialog-box');
+        const addClassBtn = document.getElementById('add-class-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const addClassForm = document.getElementById('add-class-form'); 
+        const classNavigation = document.getElementById('class-navigation');
+
+        // Function to display classes
+        async function displayClasses() {
+            const user = auth.currentUser;
+            if (user) {
+                const querySnapshot = await getDocs(collection(db, `users/${user.uid}/classes`));
+                querySnapshot.forEach((doc) => {
+                    const className = `Grade ${doc.data().grade} - Section ${doc.data().section}`;
+                    const newNavLink = document.createElement('a');
+                    newNavLink.href = `class_detail.html?classId=${doc.id}`;
+                    newNavLink.textContent = className;
+                    const newNavLi = document.createElement('li');
+                    newNavLi.appendChild(newNavLink);
+                    classNavigation.appendChild(newNavLi);
+                });
+            }
+        }
+
+        // Function to save class data to Firestore and Realtime Database
+        function saveClassToDatabase(grade, section) {
+    const user = auth.currentUser;
+    if (user) {
+        const classData = {
+            grade: parseInt(grade),
+            section: section
+        };
+        // Add class data to Firestore under the user's UID
+        addDoc(collection(db, `users/${user.uid}/classes`), classData)
+            .then((docRef) => {
+                console.log("Class added with ID: ", docRef.id);
+                // Save class data to Realtime Database
+                const classRef = ref(database, `users/${user.uid}/classes`);
+                push(classRef, classData);
+                displayClasses(); // Refresh class list after adding a new class
+            })
+            .catch((error) => {
+                console.error("Error adding class: ", error);
+            });
+    } else {
+        console.log("User not authenticated.");
+    }
+}
+
+
+        // Event listeners for adding and canceling classes
+        addClassBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            const selectedGrade = document.getElementById('grade').value;
+            const selectedSection = document.getElementById('section').value;
+            saveClassToDatabase(selectedGrade, selectedSection);
+            clearForm(); // Clear form inputs
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            event.preventDefault();
+            dialogBox.closeDialog();
+        });
+
+        dialogBox.openDialog = function () {
+            dialogOverlay.style.display = 'block';
+            dialogBox.style.display = 'block';
+        }
+
+        dialogBox.closeDialog = function () {
+            dialogOverlay.style.display = 'none';
+            dialogBox.style.display = 'none';
+        }
+
+        function clearForm() {
+            document.getElementById('grade').value = ''; // Clear grade input
+            document.getElementById('section').value = ''; // Clear section input
+        }
+
+        // Call the function to display classes on page load
+        displayClasses();
+    </script>
+    <h2>
+        <a href="homepage.html">&lt; Back to Admin Desktop</a></h2>
+
+</body>
+</html>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+
+    header {
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+    }
+
+    h2 {
+        background-color: #f4f4f4; /* Change the color to your desired value */
+        text-decoration: aliceblue;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        margin: 0;
+        padding: 10px;
+    }
+</style>

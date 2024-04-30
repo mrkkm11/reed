@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Recognition for Kids</title>
+    <style>
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        .box {
+            border: 2px solid #000;
+            padding: 20px;
+            margin: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .input-box {
+            margin-bottom: 20px;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .highlight {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+            <h1>Start Reading!</h1>
+    
+            <div class="box">
+                <p>Try to say the sentence:</p>
+                <p id="originalSentence" style="font-size: 24px; color: #333;">
+                    Pam has a cat.
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    It is on the bed.
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    It can nap. It can sit.
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    “Oh no!” says Pam.
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    “The cat fell off the bed!”
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    Is the cat sad?
+                </p>
+                <p style="font-size: 24px; color: #333;">
+                    No. It is on the mat.
+                </p>
+            </div>
+            
+            <div class="input-box">
+                <button id="startRecording" class="button">Start!</button>
+                <button id="stopRecording" class="button" disabled>Stop</button>
+            </div>
+    
+            <div class="box">
+                <p>Your Speech:</p>
+                <div id="result" style="font-size: 20px; color: #333;">Please start...</div>
+            </div>
+    
+            <div class="box">
+                <p>Error Count:</p>
+                <div id="errorCount" style="font-size: 20px; color: #333;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://capstone-db3cd-default-rtdb.firebaseio.com/", // Add the databaseUR
+            apiKey: "AIzaSyCZLwsOneYhNgqrV2FSSJldSt1ErYgyTb4",
+            authDomain: "capstone-db3cd.firebaseapp.com",
+            projectId: "capstone-db3cd",
+            storageBucket: "capstone-db3cd.appspot.com",
+            messagingSenderId: "capstone-db3cd.appspot.com",
+            appId:"1:895927224137:web:4769f8e442dffa0d923c98", 
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Get a reference to the Firestore service
+        const db = firebase.firestore();
+    </script>
+
+    <script>
+        const originalSentenceElement = document.getElementById('originalSentence');
+        const startRecordingBtn = document.getElementById('startRecording');
+        const stopRecordingBtn = document.getElementById('stopRecording');
+        const resultDiv = document.getElementById('result');
+        const errorCountDiv = document.getElementById('errorCount');
+
+        let recognition;
+        let errorCount = 0;
+
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        } else {
+            alert('Speech recognition is not supported in this browser. Please try a different browser.');
+        }
+
+        recognition.onstart = () => {
+            resultDiv.innerHTML = 'magsasalita o sasapukin kita!';
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript.toLowerCase();
+            const originalSentence = originalSentenceElement.textContent.toLowerCase();
+
+            const transcriptWords = transcript.split(' ');
+            const originalWords = originalSentence.split(' ');
+
+            let resultHtml = '';
+            let localErrorCount = 0;
+
+            for (let i = 0; i < originalWords.length; i++) {
+                if (i < transcriptWords.length && transcriptWords[i] === originalWords[i]) {
+                    resultHtml += originalWords[i] + ' ';
+                } else {
+                    resultHtml += '<span class="highlight">' + originalWords[i] + '</span> ';
+                    localErrorCount++;
+                }
+            }
+
+            errorCount += localErrorCount;
+            errorCountDiv.textContent = errorCount;
+
+            resultDiv.innerHTML = resultHtml.trim();
+
+            // Save report to Firestore
+            saveReportToFirestore(originalSentence, transcript, localErrorCount);
+        };
+
+        // Function to save report to Firestore
+        function saveReportToFirestore(originalSentence, transcript, errorCount) {
+            db.collection("reports").add({
+                originalSentence,
+                transcript,
+                errorCount,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() // Add a timestamp for when the report was saved
+            })
+            .then((docRef) => {
+                console.log("Report written with ID: ", docRef.id);
+            })
+            .catch((error) => {
+                console.error("Error adding report: ", error);
+            });
+        }
+
+        startRecordingBtn.addEventListener('click', () => {
+            recognition.start();
+            startRecordingBtn.disabled = true;
+            stopRecordingBtn.disabled = false;
+        });
+
+        stopRecordingBtn.addEventListener('click', () => {
+            recognition.stop();
+            startRecordingBtn.disabled = false;
+            stopRecordingBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>

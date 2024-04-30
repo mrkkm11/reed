@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Details</title>
+</head>
+<body>
+    <header>
+        <h1>Class Details</h1>
+    </header>
+
+    <main>
+        <section>
+            <h2>Add Student</h2>
+            <!-- Include a hidden input field for the class ID -->
+            <form id="add-student-form">
+                <div>
+                    <label for="student-name">Student Name:</label>
+                    <input type="text" id="student-name" name="student-name" placeholder="Enter student name" required>
+                </div>
+                <!-- Hidden input field for the class ID -->
+                <input type="hidden" id="class-id" name="class-id">
+                <div>
+                    <button type="submit">Add Student</button>
+                </div>
+            </form>
+        </section>
+
+        <section>
+            <h2>Student List</h2>
+            <ul id="student-list">
+                <!-- Student list will be dynamically added here -->
+            </ul>
+        </section>
+    </main>
+
+    <!-- Include Firebase SDK scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js" type="module"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        import { getDatabase, ref, push, child, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            databaseURL: "https://capstone-db3cd-default-rtdb.firebaseio.com/",
+            apiKey: "AIzaSyCZLwsOneYhNgqrV2FSSJldSt1ErYgyTb4",
+            authDomain: "capstone-db3cd.firebaseapp.com",
+            projectId: "capstone-db3cd",
+            storageBucket: "capstone-db3cd.appspot.com",
+            messagingSenderId: "capstone-db3cd.appspot.com",
+            appId: "1:895927224137:web:4769f8e442dffa0d923c98",
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        const addStudentForm = document.getElementById('add-student-form');
+        const studentList = document.getElementById('student-list');
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const classId = urlParams.get('classId');
+                    console.log("Class ID:", classId);
+
+                    if (classId) {
+                        // Set the class ID in the hidden input field
+                        document.getElementById('class-id').value = classId;
+                        // Render student list for the specified class
+                        renderStudentList(user.uid, classId); 
+                    } else {
+                        console.error("Class ID is null.");
+                    }
+                } catch (error) {
+                    console.error("Error setting custom claims:", error);
+                }
+            }
+        });
+
+        addStudentForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const studentName = document.getElementById('student-name').value;
+            const classId = document.getElementById('class-id').value; // Get the class ID
+
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    // Generate a unique student ID
+                    const studentId = generateId();
+                    const studentData = { id: studentId, name: studentName };
+                    
+                    // Add student data to Firestore
+                    await addDoc(collection(db, `users/${user.uid}/classes/${classId}/students`), studentData);
+                    
+                    // Add student data to Realtime Database
+                    const classRef = ref(database, `users/${user.uid}/classes/${classId}/students`);
+                    push(classRef, studentData);
+                    
+                    renderStudentList(user.uid, classId);
+                    addStudentForm.reset();
+                } else {
+                    console.error("User not authenticated.");
+                }
+            } catch (error) {
+                console.error("Error adding student: ", error);
+            }
+        });
+
+        async function renderStudentList(userId, classId) {
+            try {
+                studentList.innerHTML = '';
+                const q = collection(db, `users/${userId}/classes/${classId}/students`);
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((doc) => {
+                    const student = doc.data();
+                    const listItem = document.createElement('li');
+                    const studentLink = document.createElement('a');
+                    studentLink.textContent = student.name;
+                    studentLink.href = `student_profile.html?studentId=${student.id}`;
+                    listItem.appendChild(studentLink);
+                    studentList.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error("Error fetching students: ", error);
+            }
+        }
+
+        // Function to generate a unique student ID
+        function generateId() {
+            return '_' + Math.random().toString(36).substr(2, 9);
+        }
+    </script>
+
+    <h2>
+        <a href="homepage.html">&lt; Back to Admin Desktop</a>
+    </h2>
+</body>
+</html>
